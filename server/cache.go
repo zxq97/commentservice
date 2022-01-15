@@ -110,6 +110,7 @@ func cachePublishComment(ctx context.Context, commentID, pCommentID, articleID i
 		Member: commentID,
 		Score:  float64(time.Now().Unix()),
 	}
+	global.InfoLog.Printf("ctx %v cachepublishcomment commentid %v pcommentid %v articleid %v", ctx, commentID, pCommentID, articleID)
 	if pCommentID == 0 {
 		key = fmt.Sprintf(RedisKeyZArticleComment, articleID)
 		err = redisCli.ZAdd(key, z).Err()
@@ -117,6 +118,7 @@ func cachePublishComment(ctx context.Context, commentID, pCommentID, articleID i
 		key = fmt.Sprintf(RedisKeyZArticleCommentReply, pCommentID)
 		err = redisCli.ZAdd(key, z).Err()
 	}
+	global.InfoLog.Printf("ctx cachepublisherr %v", err)
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cachePublishComment commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
 	}
@@ -126,10 +128,13 @@ func cachePublishComment(ctx context.Context, commentID, pCommentID, articleID i
 func cacheSetComment(ctx context.Context, comment *Comment) error {
 	buf, err := json.Marshal(comment)
 	if err != nil {
+		global.ExcLog.Printf("ctx %v marshal comment %#v err %v", ctx, comment, err)
 		return err
 	}
+	global.InfoLog.Printf("ctx %v setcommentcache comment %#v", ctx, comment)
 	key := fmt.Sprintf(McKeyComment, comment.CommentID)
 	err = mcCli.Set(&memcache.Item{Key: key, Value: buf, Expiration: McCommentTTl})
+	global.InfoLog.Printf("ctx %v setcacheerr %v", err)
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cacheSeyComment comment %#v err %v", ctx, comment, err)
 	}
