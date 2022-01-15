@@ -1,7 +1,6 @@
 package server
 
 import (
-	"commentservice/global"
 	"commentservice/rpc/comment/pb"
 	"commentservice/util/concurrent"
 	"context"
@@ -83,11 +82,9 @@ func publishComment(ctx context.Context, commentID, pCommentID, articleID, uid, 
 		return err
 	}
 	concurrent.Go(func() {
-		global.InfoLog.Printf("ctx %v cachepublishcomment commentid %v pcommentid %v articleid %v")
 		_ = cachePublishComment(ctx, commentID, pCommentID, articleID)
 	})
 	concurrent.Go(func() {
-		global.InfoLog.Printf("ctx %v setcommentcache comment %#v", comment)
 		_ = cacheSetComment(ctx, &comment)
 	})
 	return nil
