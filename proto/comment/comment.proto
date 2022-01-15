@@ -1,0 +1,73 @@
+syntax = "proto3";
+package comment;
+option go_package = "rpc/comment/pb;comment_service";
+
+message CommentInfo {
+  int64 article_id = 1;
+  int64 uid = 2;
+  int64 comment_id = 3;
+  int64 p_comment_id = 4;
+  int64 reply_uid = 5;
+  string content = 6;
+}
+
+message ReplyInfo {
+  CommentInfo comment = 1;
+  CommentInfo reply = 2;
+}
+
+message LikeInfo {
+  int64 article_id = 1;
+  int64 uid = 2;
+}
+
+message GetCountRequest {
+  repeated int64 article_ids = 1;
+}
+
+message GetCountResponse {
+  map<int64, int64> like_count = 1;
+}
+
+message GetCommentListRequest {
+  int64 article_id = 1;
+  int64 cursor = 2;
+  int64 offset = 3;
+}
+
+message GetCommentListResponse {
+  map<int64, ReplyInfo> reply = 1;
+  bool has_more = 2;
+}
+
+message PublishCommentRequest {
+  CommentInfo comment_info = 1;
+}
+
+message EmptyResponse {
+}
+
+message LikePointRequest {
+  LikeInfo like_info = 1;
+}
+
+message GetLikeStateRequest {
+  int64 uid = 1;
+  repeated int64 article_ids = 2;
+}
+
+message GetLikeStateResponse {
+  map<int64, bool> ok = 1;
+}
+
+service CommentServer {
+  rpc GetCommentList(GetCommentListRequest) returns (GetCommentListResponse);
+  rpc PublishComment(PublishCommentRequest) returns (EmptyResponse);
+  rpc DeleteComment(PublishCommentRequest) returns (EmptyResponse);
+  rpc GetCommentCount(GetCountRequest) returns (GetCountResponse);
+  rpc GetLikeCount(GetCountRequest) returns (GetCountResponse);
+  rpc GetLikeState(GetLikeStateRequest) returns (GetLikeStateResponse);
+  rpc LikePoint(LikePointRequest) returns (EmptyResponse);
+  rpc CancelLike(LikePointRequest) returns (EmptyResponse);
+
+}
