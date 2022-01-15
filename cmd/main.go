@@ -2,6 +2,7 @@ package main
 
 import (
 	"commentservice/conf"
+	"commentservice/global"
 	"commentservice/rpc/comment/pb"
 	"commentservice/server"
 	"github.com/micro/go-micro"
@@ -16,6 +17,15 @@ var (
 
 func main() {
 	CommentConf, err = conf.LoadYaml(conf.CommentConfPath)
+	if err != nil {
+		panic(err)
+	}
+
+	global.InfoLog, err = conf.InitLog(CommentConf.InfoLog.Path)
+	if err != nil {
+		panic(err)
+	}
+	global.ExcLog, err = conf.InitLog(CommentConf.ExcLog.Path)
 	if err != nil {
 		panic(err)
 	}

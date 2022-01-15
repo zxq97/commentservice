@@ -1,6 +1,7 @@
 package server
 
 import (
+	"commentservice/global"
 	"commentservice/util/cast"
 	"context"
 	"encoding/json"
@@ -27,14 +28,14 @@ func cacheLikePoint(ctx context.Context, articleID, uid int64) error {
 	key := fmt.Sprintf(RedisKeySArticleLikeList, articleID)
 	res, err := redisCli.SAdd(key, uid).Result()
 	if err != nil {
-		excLog.Printf("ctx %v cacheLikePoint articleid %v uid %v err %v", ctx, articleID, err)
+		global.ExcLog.Printf("ctx %v cacheLikePoint articleid %v uid %v err %v", ctx, articleID, err)
 		return err
 	}
 	if res == 1 {
 		key = fmt.Sprintf(RedisKeyArticleLikeCount, articleID)
 		err = redisCli.Incr(key).Err()
 		if err != nil {
-			excLog.Printf("ctx %v cacheaddlikecount articleid %v uid %v err %v", ctx, articleID, uid, err)
+			global.ExcLog.Printf("ctx %v cacheaddlikecount articleid %v uid %v err %v", ctx, articleID, uid, err)
 			return err
 		}
 	}
@@ -45,7 +46,7 @@ func cacheCancelPoint(ctx context.Context, articleID, uid int64) error {
 	key := fmt.Sprintf(RedisKeySArticleLikeList, articleID)
 	err := redisCli.SRem(key, uid).Err()
 	if err != nil {
-		excLog.Printf("ctx %v cacheCancelPoint articleid %v uid %v err %v", ctx, articleID, uid, err)
+		global.ExcLog.Printf("ctx %v cacheCancelPoint articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
 	}
 
@@ -61,7 +62,7 @@ func cacheGetLikeState(ctx context.Context, articleIDs []int64, uid int64) (map[
 	}
 	_, err := pipe.Exec()
 	if err != nil && err != redis.Nil {
-		excLog.Printf("ctx %v cacheGetLikeState articleids %v uid %v err %v", ctx, articleIDs, uid, err)
+		global.ExcLog.Printf("ctx %v cacheGetLikeState articleids %v uid %v err %v", ctx, articleIDs, uid, err)
 		return nil, articleIDs, err
 	}
 	okMap := make(map[int64]bool, len(articleIDs))
@@ -84,7 +85,7 @@ func cacheGetCount(ctx context.Context, keyTmp string, articleIDs []int64) (map[
 	}
 	_, err := pipe.Exec()
 	if err != nil && err != redis.Nil {
-		excLog.Printf("ctx %v keytmp %v cacheGetCount articleids %v err %v", ctx, keyTmp, articleIDs, err)
+		global.ExcLog.Printf("ctx %v keytmp %v cacheGetCount articleids %v err %v", ctx, keyTmp, articleIDs, err)
 		return nil, articleIDs, err
 	}
 	cntMap := make(map[int64]int64, len(articleIDs))
@@ -117,7 +118,7 @@ func cachePublishComment(ctx context.Context, commentID, pCommentID, articleID i
 		err = redisCli.ZAdd(key, z).Err()
 	}
 	if err != nil {
-		excLog.Printf("ctx %v cachePublishComment commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
+		global.ExcLog.Printf("ctx %v cachePublishComment commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
 	}
 	return err
 }
@@ -130,7 +131,7 @@ func cacheSetComment(ctx context.Context, comment *Comment) error {
 	key := fmt.Sprintf(McKeyComment, comment.CommentID)
 	err = mcCli.Set(&memcache.Item{Key: key, Value: buf, Expiration: McCommentTTl})
 	if err != nil {
-		excLog.Printf("ctx %v cacheSeyComment comment %#v err %v", ctx, comment, err)
+		global.ExcLog.Printf("ctx %v cacheSeyComment comment %#v err %v", ctx, comment, err)
 	}
 	return err
 }
@@ -148,12 +149,12 @@ func cacheDeleteComment(ctx context.Context, commentID, pCommentID, articleID in
 		err = redisCli.ZRem(rkey, commentID).Err()
 	}
 	if err != nil {
-		excLog.Printf("ctx %v cachedeletecommentlist commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
+		global.ExcLog.Printf("ctx %v cachedeletecommentlist commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
 	}
 	key = fmt.Sprintf(McKeyComment, commentID)
 	err = mcCli.Delete(key)
 	if err != nil {
-		excLog.Printf("ctx %v cachedeletecomment commentid %v err %v", ctx, commentID, err)
+		global.ExcLog.Printf("ctx %v cachedeletecomment commentid %v err %v", ctx, commentID, err)
 	}
 	return err
 }
@@ -162,7 +163,7 @@ func cacheGetCommentList(ctx context.Context, articleID, cursor, offset int64) (
 	key := fmt.Sprintf(RedisKeyZArticleComment, articleID)
 	val, err := redisCli.ZRevRange(key, cursor, cursor+offset).Result()
 	if err != nil {
-		excLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset, err)
+		global.ExcLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset, err)
 		return nil, false, err
 	}
 	var hasMore bool
@@ -183,13 +184,13 @@ func cacheGetCommentList(ctx context.Context, articleID, cursor, offset int64) (
 	}
 	_, err = pipe.Exec()
 	if err != nil && err != redis.Nil {
-		excLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset)
+		global.ExcLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset)
 		return nil, false, err
 	}
 	for k, v := range cmdMap {
 		val, err = v.Result()
 		if err != nil && err != redis.Nil {
-			excLog.Printf("ctx %v cachegetcommentreplylist commentid %v err %v", ctx, k, err)
+			global.ExcLog.Printf("ctx %v cachegetcommentreplylist commentid %v err %v", ctx, k, err)
 			continue
 		}
 		for _, sid := range val {
@@ -213,7 +214,7 @@ func cacheGetComment(ctx context.Context, commentIDs []int64) (map[int64]*Commen
 		comment := Comment{}
 		err = json.Unmarshal(v.Value, &comment)
 		if err != nil {
-			excLog.Printf("ctx %v cachegetcomment commentid %v err %v", ctx, v.Value, err)
+			global.ExcLog.Printf("ctx %v cachegetcomment commentid %v err %v", ctx, v.Value, err)
 			continue
 		}
 		commentMap[comment.CommentID] = &comment

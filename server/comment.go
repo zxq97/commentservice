@@ -1,7 +1,7 @@
 package server
 
 import (
-	comment_service "commentservice/rpc/comment/pb"
+	"commentservice/rpc/comment/pb"
 	"commentservice/util/concurrent"
 	"context"
 )
