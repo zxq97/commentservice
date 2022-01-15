@@ -17,12 +17,12 @@ func dbLikePoint(ctx context.Context, articleID, uid int64) error {
 	}
 	tx := dbCli.Begin()
 	defer tx.Rollback()
-	err := dbCli.Create(like).Error
+	err := tx.Create(like).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbLikePoint articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
 	}
-	err = dbCli.Model(&likeCount).Where("article_id = ", articleID).Update("like_count", gorm.Expr("like_count + 1")).Error
+	err = tx.Set("gorm:insert_option", "ON DUPLICATE key update like_count = like_count + 1").Create(&likeCount).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbaddlikecount articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
@@ -38,12 +38,12 @@ func dbCancelPoint(ctx context.Context, articleID, uid int64) error {
 	}
 	tx := dbCli.Begin()
 	defer tx.Rollback()
-	err := dbCli.Where("article_id = ? and uid = ?", articleID, uid).Delete(&LikePoint{}).Error
+	err := tx.Where("article_id = ? and uid = ?", articleID, uid).Delete(&LikePoint{}).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbCancelPoint articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
 	}
-	err = dbCli.Model(&likeCount).Where("article_id = ", articleID).Update("like_count", gorm.Expr("like_count - 1")).Error
+	err = tx.Model(&likeCount).Where("article_id = ", articleID).Update("like_count", gorm.Expr("like_count - 1")).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbreducelikecount articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
@@ -101,12 +101,12 @@ func dbPublishComment(ctx context.Context, comment *Comment) error {
 	}
 	tx := dbCli.Begin()
 	defer tx.Rollback()
-	err := dbCli.Create(comment).Error
+	err := tx.Create(comment).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbPublishComment comment %#v err %v", ctx, comment, err)
 		return err
 	}
-	err = dbCli.Model(&commentCount).Where("article_id = ", comment.ArticleID).Update("comment_count", gorm.Expr("comment_count + 1")).Error
+	err = tx.Set("gorm:insert_option", "ON DUPLICATE key update comment_count = comment_count + 1").Create(&commentCount).Error
 	if err != nil {
 		global.ExcLog.Printf("ctx %v dbaddlikecomment articleid %v uid %v err %v", ctx, comment.ArticleID, comment.UID, err)
 		return err
