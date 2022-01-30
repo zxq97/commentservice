@@ -3,6 +3,7 @@ package server
 import (
 	"commentservice/global"
 	"context"
+	"database/sql"
 	"github.com/jinzhu/gorm"
 )
 
@@ -15,7 +16,7 @@ func dbLikePoint(ctx context.Context, articleID, uid int64) error {
 		ArticleID: articleID,
 		LikeCount: 1,
 	}
-	tx := dbCli.Begin()
+	tx := dbCli.BeginTx(ctx, &sql.TxOptions{})
 	defer tx.Rollback()
 	err := tx.Create(like).Error
 	if err != nil {
@@ -36,7 +37,7 @@ func dbCancelPoint(ctx context.Context, articleID, uid int64) error {
 		ArticleID: articleID,
 		LikeCount: 1,
 	}
-	tx := dbCli.Begin()
+	tx := dbCli.BeginTx(ctx, &sql.TxOptions{})
 	defer tx.Rollback()
 	err := tx.Where("article_id = ? and uid = ?", articleID, uid).Delete(&LikePoint{}).Error
 	if err != nil {
@@ -99,7 +100,7 @@ func dbPublishComment(ctx context.Context, comment *Comment) error {
 		ArticleID:    comment.ArticleID,
 		CommentCount: 1,
 	}
-	tx := dbCli.Begin()
+	tx := dbCli.BeginTx(ctx, &sql.TxOptions{})
 	defer tx.Rollback()
 	err := tx.Create(comment).Error
 	if err != nil {
