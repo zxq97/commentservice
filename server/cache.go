@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"time"
 )
 
@@ -26,14 +26,14 @@ const (
 
 func cacheLikePoint(ctx context.Context, articleID, uid int64) error {
 	key := fmt.Sprintf(RedisKeySArticleLikeList, articleID)
-	res, err := redisCli.SAdd(key, uid).Result()
+	res, err := redisCli.SAdd(ctx, key, uid).Result()
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cacheLikePoint articleid %v uid %v err %v", ctx, articleID, err)
 		return err
 	}
 	if res == 1 {
 		key = fmt.Sprintf(RedisKeyArticleLikeCount, articleID)
-		err = redisCli.Incr(key).Err()
+		err = redisCli.Incr(ctx, key).Err()
 		if err != nil {
 			global.ExcLog.Printf("ctx %v cacheaddlikecount articleid %v uid %v err %v", ctx, articleID, uid, err)
 			return err
@@ -44,7 +44,7 @@ func cacheLikePoint(ctx context.Context, articleID, uid int64) error {
 
 func cacheCancelPoint(ctx context.Context, articleID, uid int64) error {
 	key := fmt.Sprintf(RedisKeySArticleLikeList, articleID)
-	err := redisCli.SRem(key, uid).Err()
+	err := redisCli.SRem(ctx, key, uid).Err()
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cacheCancelPoint articleid %v uid %v err %v", ctx, articleID, uid, err)
 		return err
@@ -58,9 +58,9 @@ func cacheGetLikeState(ctx context.Context, articleIDs []int64, uid int64) (map[
 	pipe := redisCli.Pipeline()
 	for _, v := range articleIDs {
 		key := fmt.Sprintf(RedisKeySArticleLikeList, v)
-		cmdMap[v] = pipe.SIsMember(key, uid)
+		cmdMap[v] = pipe.SIsMember(ctx, key, uid)
 	}
-	_, err := pipe.Exec()
+	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		global.ExcLog.Printf("ctx %v cacheGetLikeState articleids %v uid %v err %v", ctx, articleIDs, uid, err)
 		return nil, articleIDs, err
@@ -81,9 +81,9 @@ func cacheGetCount(ctx context.Context, keyTmp string, articleIDs []int64) (map[
 	pipe := redisCli.Pipeline()
 	for _, v := range articleIDs {
 		key := fmt.Sprintf(keyTmp, v)
-		cmdMap[v] = pipe.Get(key)
+		cmdMap[v] = pipe.Get(ctx, key)
 	}
-	_, err := pipe.Exec()
+	_, err := pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		global.ExcLog.Printf("ctx %v keytmp %v cacheGetCount articleids %v err %v", ctx, keyTmp, articleIDs, err)
 		return nil, articleIDs, err
@@ -106,16 +106,16 @@ func cachePublishComment(ctx context.Context, commentID, pCommentID, articleID i
 		key string
 		err error
 	)
-	z := redis.Z{
+	z := &redis.Z{
 		Member: commentID,
 		Score:  float64(time.Now().Unix()),
 	}
 	if pCommentID == 0 {
 		key = fmt.Sprintf(RedisKeyZArticleComment, articleID)
-		err = redisCli.ZAdd(key, z).Err()
+		err = redisCli.ZAdd(ctx, key, z).Err()
 	} else {
 		key = fmt.Sprintf(RedisKeyZArticleCommentReply, pCommentID)
-		err = redisCli.ZAdd(key, z).Err()
+		err = redisCli.ZAdd(ctx, key, z).Err()
 	}
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cachePublishComment commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
@@ -143,11 +143,11 @@ func cacheDeleteComment(ctx context.Context, commentID, pCommentID, articleID in
 	var err error
 	if pCommentID == 0 {
 		pipe := redisCli.Pipeline()
-		pipe.ZRem(key, commentID)
-		pipe.Del(rkey)
-		_, err = pipe.Exec()
+		pipe.ZRem(ctx, key, commentID)
+		pipe.Del(ctx, rkey)
+		_, err = pipe.Exec(ctx)
 	} else {
-		err = redisCli.ZRem(rkey, commentID).Err()
+		err = redisCli.ZRem(ctx, rkey, commentID).Err()
 	}
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cachedeletecommentlist commentid %v pcommentid %v articleid %v err %v", ctx, commentID, pCommentID, articleID, err)
@@ -162,7 +162,7 @@ func cacheDeleteComment(ctx context.Context, commentID, pCommentID, articleID in
 
 func cacheGetCommentList(ctx context.Context, articleID, cursor, offset int64) (map[int64][]int64, bool, error) {
 	key := fmt.Sprintf(RedisKeyZArticleComment, articleID)
-	val, err := redisCli.ZRevRange(key, cursor, cursor+offset).Result()
+	val, err := redisCli.ZRevRange(ctx, key, cursor, cursor+offset).Result()
 	if err != nil {
 		global.ExcLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset, err)
 		return nil, false, err
@@ -181,9 +181,9 @@ func cacheGetCommentList(ctx context.Context, articleID, cursor, offset int64) (
 		commendID := cast.ParseInt(v, 0)
 		replyMap[commendID] = make([]int64, 0, 2)
 		key = fmt.Sprintf(RedisKeyZArticleCommentReply, commendID)
-		cmdMap[commendID] = pipe.ZRevRange(key, 0, CommentReplyCount)
+		cmdMap[commendID] = pipe.ZRevRange(ctx, key, 0, CommentReplyCount)
 	}
-	_, err = pipe.Exec()
+	_, err = pipe.Exec(ctx)
 	if err != nil && err != redis.Nil {
 		global.ExcLog.Printf("ctx %v cacheGetCommentList articleid %v cursor %v offset %v err %v", ctx, articleID, cursor, offset)
 		return nil, false, err

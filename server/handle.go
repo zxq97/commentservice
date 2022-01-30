@@ -6,7 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/bradfitz/gomemcache/memcache"
-	"github.com/go-redis/redis"
+	"github.com/go-redis/redis/v8"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 )
